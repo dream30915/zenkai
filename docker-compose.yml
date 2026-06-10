@@ -1,0 +1,124 @@
+# ============================================================
+# Menu-to-Video Platform — Local Dev Stack
+# รัน: docker-compose up -d
+# หยุด: docker-compose down
+# ============================================================
+
+services:
+  # ----------------------------------------------------------
+  # n8n — Automation Engine
+  # เข้าใช้: http://localhost:5678
+  # ----------------------------------------------------------
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: kaizen_n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-changeme}
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Asia/Bangkok
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-kaizen}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-kaizen_secret}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/home/node/.n8n/workflows
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - kaizen_net
+
+  # ----------------------------------------------------------
+  # PostgreSQL — Local Database
+  # Connection: postgresql://kaizen:kaizen_secret@localhost:5432/kaizen
+  # ----------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: kaizen_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-kaizen}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-kaizen_secret}
+      - POSTGRES_DB=kaizen
+      - POSTGRES_MULTIPLE_DATABASES=n8n
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kaizen}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kaizen_net
+
+  # ----------------------------------------------------------
+  # Redis — Job Queue (BullMQ)
+  # Connection: redis://localhost:6379
+  # ----------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: kaizen_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - kaizen_net
+
+  # ----------------------------------------------------------
+  # rembg — Background Removal Service (self-hosted)
+  # API: http://localhost:7000
+  # ----------------------------------------------------------
+  rembg:
+    image: danielgatis/rembg:latest
+    container_name: kaizen_rembg
+    restart: unless-stopped
+    ports:
+      - "7000:7000"
+    command: s
+    networks:
+      - kaizen_net
+
+  # ----------------------------------------------------------
+  # Redis Commander — Redis GUI (dev only)
+  # เข้าใช้: http://localhost:8081
+  # ----------------------------------------------------------
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: kaizen_redis_gui
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    depends_on:
+      - redis
+    networks:
+      - kaizen_net
+    profiles:
+      - tools
+
+volumes:
+  n8n_data:
+  postgres_data:
+  redis_data:
+
+networks:
+  kaizen_net:
+    driver: bridge
