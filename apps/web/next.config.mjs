@@ -16,9 +16,7 @@ const nextConfig = {
       },
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ["sharp", "ioredis"],
-  },
+  serverExternalPackages: ["sharp", "ioredis"],
 };
 
 export default nextConfig;
