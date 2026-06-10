@@ -54,3 +54,6 @@ coverage/
 # Playwright
 playwright-report/
 test-results/
+
+# Nested git clones (อย่า commit folder ที่ clone ผิดที่)
+kaizen/
