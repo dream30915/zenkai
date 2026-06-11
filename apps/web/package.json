@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "worker:video": "npx tsx workers/video.worker.ts",
+    "worker:post": "npx tsx workers/post.worker.ts",
+    "workers": "concurrently \"npm run worker:video\" \"npm run worker:post\""
   },
   "dependencies": {
     "next": "^15.3.3",
@@ -47,6 +50,8 @@
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.39",
     "eslint": "^8.57.0",
-    "eslint-config-next": "^15.3.3"
+    "eslint-config-next": "^15.3.3",
+    "tsx": "^4.16.0",
+    "concurrently": "^8.2.2"
   }
 }
