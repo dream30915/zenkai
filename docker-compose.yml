@@ -7,14 +7,14 @@
 services:
   # ----------------------------------------------------------
   # n8n — Automation Engine
-  # เข้าใช้: http://localhost:5678
+  # เข้าใช้: http://localhost:5679  (5678 ถูก system n8n ใช้อยู่)
   # ----------------------------------------------------------
   n8n:
     image: n8nio/n8n:latest
     container_name: kaizen_n8n
     restart: unless-stopped
     ports:
-      - "5678:5678"
+      - "5679:5678"
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
