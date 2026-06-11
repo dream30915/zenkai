@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Vercel deploy สั่งรันเองจากแท็บ Actions เท่านั้น (ต้องตั้ง secrets ก่อน)
+  workflow_dispatch:
 
 jobs:
   # ----------------------------------------------------------
