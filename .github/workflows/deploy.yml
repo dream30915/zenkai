@@ -43,7 +43,9 @@ jobs:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
     needs: check
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # รันเฉพาะกดสั่งเองจากแท็บ Actions — กัน fail ฟรีตอนยังไม่ได้ตั้ง VERCEL_* secrets
+    # หมายเหตุ: เว็บรันบน Vercel ได้ แต่ workers/Redis/n8n ต้องอยู่บน VPS เสมอ
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
 
