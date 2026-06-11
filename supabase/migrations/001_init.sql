@@ -109,8 +109,7 @@ ALTER TABLE post_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE menus ENABLE ROW LEVEL SECURITY;
 ALTER TABLE analytics ENABLE ROW LEVEL SECURITY;
 
--- Policy: service role เข้าถึงได้ทุกอย่าง
-CREATE POLICY "service_role_all" ON jobs FOR ALL USING (true);
-CREATE POLICY "service_role_all" ON post_results FOR ALL USING (true);
-CREATE POLICY "service_role_all" ON menus FOR ALL USING (true);
-CREATE POLICY "service_role_all" ON analytics FOR ALL USING (true);
+-- ⚠️ ตั้งใจไม่สร้าง policy ใด ๆ:
+-- service_role key (ฝั่งเซิร์ฟเวอร์) ข้าม RLS ได้อยู่แล้ว
+-- ส่วน publishable/anon key จะถูกบล็อกทั้งหมด — ถูกต้องแล้ว
+-- เพราะ policy แบบ USING (true) จะเปิดให้ใครก็ได้อ่าน/เขียนผ่าน key สาธารณะ
