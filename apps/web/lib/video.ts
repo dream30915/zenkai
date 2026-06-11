@@ -264,3 +264,34 @@ export async function generateVideo(params: {
     return await generateCreatomateVideo({ imageUrl, menuName, menuNameEn, price, script });
   }
 }
+
+// ----------------------------------------------------------------
+// generateVideoAuto — ใช้ phaya.io เป็น primary, fallback เดิม
+// ----------------------------------------------------------------
+import { generateFoodVideoPhaya } from "@/lib/phaya";
+
+export async function generateVideoAuto(params: {
+  imageUrl: string;
+  menuName: string;
+  menuNameEn?: string;
+  price?: string;
+  script: string;
+  tier: VideoTier;
+}): Promise<VideoResult> {
+  const { imageUrl, menuName, menuNameEn, tier } = params;
+
+  // ถ้ามี PHAYA_API_KEY ใช้ phaya ก่อน
+  if (process.env.PHAYA_API_KEY) {
+    try {
+      const phayaTier =
+        tier === "tier1" ? "fast" : tier === "tier2" ? "quality" : "premium";
+      const url = await generateFoodVideoPhaya({ imageUrl, menuName, menuNameEn, tier: phayaTier });
+      return { url, duration: tier === "tier1" ? 10 : 15, tier };
+    } catch (err) {
+      console.warn("[video] Phaya failed, falling back:", err);
+    }
+  }
+
+  // Fallback: เดิม (Creatomate / Kling / Runway)
+  return generateVideo(params);
+}

@@ -56,3 +56,29 @@ export function extractHookFromScript(script: string): string {
   // fallback: ใช้ 2 บรรทัดแรก
   return lines.slice(0, 2).join(" ").trim().substring(0, 150);
 }
+
+// ----------------------------------------------------------------
+// generateVoiceoverPhaya — ใช้ phaya.io TTS ภาษาไทย
+// ----------------------------------------------------------------
+import { phayaTTS } from "@/lib/phaya";
+import https from "https";
+
+export async function generateVoiceoverPhaya(text: string): Promise<Buffer> {
+  if (!process.env.PHAYA_API_KEY) {
+    return generateVoiceover(text, "th");
+  }
+  try {
+    const audioUrl = await phayaTTS({ text: text.substring(0, 500) });
+    // Download audio to buffer
+    return new Promise((resolve, reject) => {
+      https.get(audioUrl, (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => resolve(Buffer.concat(chunks)));
+        res.on("error", reject);
+      });
+    });
+  } catch {
+    return generateVoiceover(text, "th");
+  }
+}

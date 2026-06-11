@@ -1,6 +1,2 @@
-import { redirect } from "next/navigation";
-
-// Root redirects to dashboard
-export default function Home() {
-  redirect("/upload");
-}
+// Root: handled by (dashboard)/page.tsx
+export { default } from "@/app/(dashboard)/page";
