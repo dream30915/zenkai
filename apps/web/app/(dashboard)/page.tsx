@@ -1,139 +1,167 @@
 import Link from "next/link";
-import { Upload, BookOpen, Briefcase, BarChart2, Sparkles, Zap, Globe } from "lucide-react";
+import { Upload, BookOpen, Briefcase, BarChart2, ArrowRight } from "lucide-react";
 
-export const metadata = { title: "全開 Zenkai — Menu-to-Video Platform" };
+export const metadata = { title: "全開 Zenkai — AI Content Studio" };
 
-const QUICK_ACTIONS = [
+const ACTIONS = [
   {
     href: "/upload",
     icon: Upload,
-    title: "สร้างวิดีโอใหม่",
-    desc: "อัปโหลดรูปอาหาร → AI สร้างวิดีโอ",
-    color: "from-sakura-500 to-sakura-600",
-    textColor: "text-white",
+    label: "สร้างวิดีโอ",
+    sub: "อัพรูป → ได้คลิปใน 10 วิ",
+    accent: "border-beni-500",
+    iconBg: "bg-beni-50 text-beni-600",
+    badge: "หลัก",
+    badgeColor: "bg-beni-500 text-white",
   },
   {
     href: "/menus",
     icon: BookOpen,
-    title: "คลังเมนู",
-    desc: "จัดการเมนูและสร้างวิดีโอซ้ำ",
-    color: "from-purple-500 to-purple-600",
-    textColor: "text-white",
+    label: "คลังเมนู",
+    sub: "จัดการเมนูประจำร้าน",
+    accent: "border-kin-400",
+    iconBg: "bg-kin-50 text-kin-600",
+    badge: null,
+    badgeColor: "",
   },
   {
     href: "/jobs",
     icon: Briefcase,
-    title: "งานทั้งหมด",
-    desc: "ดูสถานะและประวัติการสร้างวิดีโอ",
-    color: "from-blue-500 to-blue-600",
-    textColor: "text-white",
+    label: "งานทั้งหมด",
+    sub: "ดูคลิปที่สร้างแล้ว",
+    accent: "border-sumi-400",
+    iconBg: "bg-sumi-100 text-sumi-600",
+    badge: null,
+    badgeColor: "",
   },
   {
     href: "/analytics",
     icon: BarChart2,
-    title: "Analytics",
-    desc: "ดูสถิติและประสิทธิภาพระบบ",
-    color: "from-green-500 to-green-600",
-    textColor: "text-white",
+    label: "Analytics",
+    sub: "สถิติการใช้งาน",
+    accent: "border-seiji-500",
+    iconBg: "bg-seiji-100 text-seiji-600",
+    badge: null,
+    badgeColor: "",
   },
 ];
 
-const FEATURES = [
-  {
-    icon: Sparkles,
-    title: "AI เขียน Script",
-    desc: "GPT-4o เขียน TikTok/Reels script ภาษาไทยให้อัตโนมัติ",
-  },
-  {
-    icon: Zap,
-    title: "Video AI 3 ระดับ",
-    desc: "เลือกได้ตั้งแต่ fast template → Sora 2 AI → cinematic premium",
-  },
-  {
-    icon: Globe,
-    title: "โพสต์ 5 แพลตฟอร์ม",
-    desc: "TikTok, Instagram Reels, Facebook, YouTube Shorts, LINE OA",
-  },
+const PIPELINE = [
+  { icon: "📸", label: "ถ่ายรูป" },
+  { icon: "🤖", label: "AI Script" },
+  { icon: "🎬", label: "สร้างคลิป" },
+  { icon: "🔊", label: "เสียงพากย์" },
+  { icon: "📲", label: "โพสต์" },
 ];
 
 export default function DashboardHome() {
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      {/* Hero */}
-      <div className="mb-10">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-sakura-50 border border-sakura-200 rounded-full text-xs font-medium text-sakura-600 mb-4">
-          <span className="w-1.5 h-1.5 bg-sakura-500 rounded-full animate-pulse" />
-          🍣 AI สร้างคอนเทนต์ร้านอาหารญี่ปุ่น
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          全開 Zenkai
-        </h1>
-        <p className="text-gray-500 text-lg">
-          ถ่ายรูปอาหาร → AI สร้างวิดีโอ → โพสต์ทุกแพลตฟอร์มอัตโนมัติ
-        </p>
-      </div>
+    <div className="min-h-screen bg-washi-50">
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        {QUICK_ACTIONS.map(({ href, icon: Icon, title, desc, color }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`bg-gradient-to-br ${color} rounded-2xl p-5 hover:scale-[1.02] transition-all shadow-sm`}
-          >
-            <Icon className="w-6 h-6 text-white mb-3 opacity-90" />
-            <p className="font-semibold text-white text-sm">{title}</p>
-            <p className="text-white/70 text-xs mt-1">{desc}</p>
-          </Link>
-        ))}
-      </div>
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden bg-sumi-900 px-6 pt-10 pb-12 md:px-12 md:pt-14 md:pb-16">
+        {/* dot pattern */}
+        <div className="absolute inset-0 opacity-[0.04]" style={{
+          backgroundImage: "radial-gradient(circle, #C9A84C 1px, transparent 1px)",
+          backgroundSize: "24px 24px"
+        }} />
+        {/* vermilion glow */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-beni-600/10 rounded-full blur-3xl" />
 
-      {/* Features */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-8">
-        <h2 className="font-semibold text-gray-900 mb-5">ระบบทำงานอะไรบ้าง</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {FEATURES.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="flex items-start gap-3">
-              <div className="w-9 h-9 bg-sakura-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Icon className="w-5 h-5 text-sakura-500" />
-              </div>
-              <div>
-                <p className="font-medium text-sm text-gray-900">{title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
-              </div>
+        <div className="relative max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-beni-600/20 border border-beni-500/30 rounded-full text-xs font-medium text-beni-300 mb-5 tracking-wide">
+            <span className="w-1.5 h-1.5 bg-beni-400 rounded-full animate-pulse" />
+            AI สร้างคอนเทนต์ร้านอาหารญี่ปุ่น
+          </div>
+
+          <div className="flex items-start gap-4 mb-3">
+            <div>
+              <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight leading-none">
+                全開
+              </h1>
+              <div className="w-12 h-0.5 bg-beni-500 mt-2 mb-1" />
+              <p className="text-kin-400 font-semibold text-xl tracking-widest uppercase">Zenkai</p>
             </div>
+          </div>
+
+          <p className="text-sumi-300 text-base md:text-lg mt-4 mb-7 max-w-md leading-relaxed">
+            ถ่ายรูปอาหาร → AI เขียนสคริปต์ → ได้คลิปพร้อมโพสต์<br />
+            <span className="text-sumi-400 text-sm">TikTok · Reels · Facebook · YouTube Shorts</span>
+          </p>
+
+          <Link
+            href="/upload"
+            className="inline-flex items-center gap-2.5 bg-beni-600 hover:bg-beni-500 text-white font-semibold px-6 py-3 rounded-xl transition-all hover:shadow-lg hover:shadow-beni-900/40 active:scale-[0.98]"
+          >
+            <Upload className="w-4 h-4" />
+            สร้างวิดีโอเลย
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+
+      {/* ── Quick Actions ── */}
+      <div className="px-6 md:px-12 -mt-4 relative z-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {ACTIONS.map(({ href, icon: Icon, label, sub, accent, iconBg, badge, badgeColor }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`group relative bg-white rounded-2xl p-4 border-t-2 ${accent} shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5`}
+            >
+              {badge && (
+                <span className={`absolute top-3 right-3 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${badgeColor}`}>
+                  {badge}
+                </span>
+              )}
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${iconBg}`}>
+                <Icon className="w-4.5 h-4.5" />
+              </div>
+              <p className="font-semibold text-sumi-900 text-sm">{label}</p>
+              <p className="text-sumi-400 text-xs mt-0.5 leading-relaxed">{sub}</p>
+            </Link>
           ))}
         </div>
       </div>
 
-      {/* Pipeline visual */}
-      <div className="bg-gradient-to-r from-gray-50 to-sakura-50 border border-gray-200 rounded-2xl p-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Pipeline อัตโนมัติ</h2>
-        <div className="flex items-center gap-2 flex-wrap">
-          {[
-            { step: "1", label: "📸 ถ่ายรูปอาหาร" },
-            { step: "→", label: "" },
-            { step: "2", label: "🤖 AI เขียน Script" },
-            { step: "→", label: "" },
-            { step: "3", label: "🎬 Sora 2 สร้างวิดีโอ" },
-            { step: "→", label: "" },
-            { step: "4", label: "🔊 TTS เสียงพากย์ไทย" },
-            { step: "→", label: "" },
-            { step: "5", label: "📲 โพสต์ 5 แพลตฟอร์ม" },
-          ].map(({ step, label }, i) =>
-            label ? (
-              <div key={i} className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-3 py-2">
-                <span className="w-5 h-5 bg-sakura-500 text-white rounded-full text-xs flex items-center justify-center font-bold flex-shrink-0">
-                  {step}
-                </span>
-                <span className="text-sm text-gray-700 whitespace-nowrap">{label}</span>
+      {/* ── Pipeline ── */}
+      <div className="px-6 md:px-12 mt-8">
+        <div className="bg-white rounded-2xl border border-washi-200 p-5 shadow-sm">
+          <p className="text-xs font-semibold text-sumi-500 uppercase tracking-widest mb-4">Pipeline อัตโนมัติ</p>
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+            {PIPELINE.map((s, i) => (
+              <div key={i} className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="w-10 h-10 rounded-full bg-sumi-900 flex items-center justify-center text-lg shadow-sm">
+                    {s.icon}
+                  </div>
+                  <span className="text-[11px] text-sumi-500 whitespace-nowrap font-medium">{s.label}</span>
+                </div>
+                {i < PIPELINE.length - 1 && (
+                  <div className="flex items-center mb-4 mx-0.5">
+                    <div className="w-3 h-px bg-sumi-200" />
+                    <div className="w-1 h-1 rounded-full bg-beni-400" />
+                  </div>
+                )}
               </div>
-            ) : (
-              <span key={i} className="text-gray-400 text-lg">→</span>
-            )
-          )}
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* ── Tip banner ── */}
+      <div className="px-6 md:px-12 mt-4 mb-8">
+        <div className="bg-kin-50 border border-kin-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+          <span className="text-xl mt-0.5">💡</span>
+          <div>
+            <p className="text-sm font-semibold text-kin-700">เคล็ดลับ</p>
+            <p className="text-xs text-kin-600 mt-0.5 leading-relaxed">
+              ถ่ายรูปอาหารในแสงดี 3-5 รูป แล้วกด <strong>สร้างวิดีโอ</strong> ได้คลิปพร้อมโพสต์ใน 10 วินาที
+            </p>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }

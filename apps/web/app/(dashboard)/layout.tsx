@@ -2,74 +2,84 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Upload, BookOpen, Briefcase, BarChart2, Settings, ChefHat, HelpCircle } from "lucide-react";
+import { Home, Upload, BookOpen, Briefcase, BarChart2, Settings, HelpCircle } from "lucide-react";
 import { clsx } from "clsx";
 
 const navItems = [
-  { href: "/", icon: Home, label: "หน้าหลัก", exact: true },
-  { href: "/upload", icon: Upload, label: "สร้างวิดีโอ" },
-  { href: "/menus", icon: BookOpen, label: "คลังเมนู" },
-  { href: "/jobs", icon: Briefcase, label: "งานทั้งหมด" },
-  { href: "/analytics", icon: BarChart2, label: "Analytics" },
-  { href: "/settings", icon: Settings, label: "ตั้งค่า" },
-  { href: "/guide", icon: HelpCircle, label: "วิธีใช้งาน" },
+  { href: "/",          icon: Home,        label: "หน้าหลัก",    exact: true },
+  { href: "/upload",    icon: Upload,      label: "สร้างวิดีโอ" },
+  { href: "/menus",     icon: BookOpen,    label: "คลังเมนู"   },
+  { href: "/jobs",      icon: Briefcase,   label: "งานทั้งหมด" },
+  { href: "/analytics", icon: BarChart2,   label: "Analytics"  },
+  { href: "/settings",  icon: Settings,    label: "ตั้งค่า"     },
+  { href: "/guide",     icon: HelpCircle,  label: "วิธีใช้งาน" },
+];
+
+const apiStatus = [
+  { label: "Phaya.io", env: "PHAYA_API_KEY" },
+  { label: "Supabase", env: "NEXT_PUBLIC_SUPABASE_URL" },
+  { label: "OpenAI",   env: "OPENAI_API_KEY" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm flex-shrink-0">
+    <div className="min-h-screen flex bg-washi-50">
+
+      {/* ─── Sidebar ─── */}
+      <aside className="hidden md:flex w-60 flex-col bg-sumi-900 border-r border-sumi-800 flex-shrink-0 relative">
+        {/* Noren accent line */}
+        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-beni-500" />
+
         {/* Logo */}
-        <div className="p-6 border-b border-gray-100">
+        <div className="px-5 py-6 border-b border-sumi-800">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-sakura-500 rounded-xl flex items-center justify-center group-hover:bg-sakura-600 transition-colors">
-              <ChefHat className="w-6 h-6 text-white" />
+            <div className="w-9 h-9 rounded-xl bg-beni-600 flex items-center justify-center flex-shrink-0 shadow-lg group-hover:bg-beni-500 transition-colors">
+              <span className="text-white font-bold text-base leading-none">全</span>
             </div>
             <div>
-              <h1 className="font-bold text-gray-900 text-lg leading-tight">全開 Zenkai</h1>
-              <p className="text-xs text-gray-500">Menu-to-Video</p>
+              <p className="text-white font-bold text-base leading-tight tracking-wide">Zenkai</p>
+              <p className="text-sumi-400 text-[11px] mt-0.5 tracking-widest uppercase">Menu · AI · Video</p>
             </div>
           </Link>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-4 space-y-1">
-          {navItems.map(({ href, icon: Icon, label, exact }) => (
-            <Link
-              key={href}
-              href={href}
-              className={clsx(
-                "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
-                isActive(href, exact)
-                  ? "bg-sakura-50 text-sakura-600 border border-sakura-100"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              )}
-            >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              {label}
-            </Link>
-          ))}
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+          {navItems.map(({ href, icon: Icon, label, exact }) => {
+            const active = isActive(href, exact);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={clsx(
+                  "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                  active
+                    ? "bg-sumi-800 text-white"
+                    : "text-sumi-300 hover:bg-sumi-800/60 hover:text-white"
+                )}
+              >
+                {active && <span className="absolute left-0 top-1 bottom-1 w-0.5 bg-beni-400 rounded-full" />}
+                <Icon className={clsx("w-4 h-4 flex-shrink-0", active ? "text-beni-400" : "text-sumi-500")} />
+                {label}
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Status */}
-        <div className="p-4 border-t border-gray-100">
-          <div className="bg-gray-50 rounded-xl p-3 space-y-2">
-            <p className="text-xs font-medium text-gray-500">สถานะ API</p>
-            {[
-              { label: "Phaya.io", envKey: "PHAYA_API_KEY" },
-              { label: "Supabase", envKey: "NEXT_PUBLIC_SUPABASE_URL" },
-              { label: "OpenAI", envKey: "OPENAI_API_KEY" },
-            ].map(({ label }) => (
-              <div key={label} className="flex items-center justify-between text-xs">
-                <span className="text-gray-600">{label}</span>
-                <span className="flex items-center gap-1 text-gray-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                  ยังไม่ตั้งค่า
+        {/* API Status */}
+        <div className="px-4 py-4 border-t border-sumi-800">
+          <p className="text-[10px] font-medium text-sumi-500 uppercase tracking-widest mb-2">สถานะ API</p>
+          <div className="space-y-1.5">
+            {apiStatus.map(({ label }) => (
+              <div key={label} className="flex items-center justify-between">
+                <span className="text-xs text-sumi-400">{label}</span>
+                <span className="flex items-center gap-1 text-seiji-500 text-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-seiji-500 animate-pulse" />
+                  พร้อม
                 </span>
               </div>
             ))}
@@ -77,7 +87,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto min-w-0">{children}</main>
+      {/* ─── Mobile bottom nav ─── */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-sumi-900 border-t border-sumi-800 flex">
+        {navItems.slice(0, 5).map(({ href, icon: Icon, label, exact }) => {
+          const active = isActive(href, exact);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={clsx(
+                "flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 text-[10px] transition-colors",
+                active ? "text-beni-400" : "text-sumi-400"
+              )}
+            >
+              <Icon className="w-5 h-5" />
+              <span>{label.slice(0, 4)}</span>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* ─── Main ─── */}
+      <main className="flex-1 overflow-auto min-w-0 pb-16 md:pb-0">
+        {children}
+      </main>
     </div>
   );
 }
