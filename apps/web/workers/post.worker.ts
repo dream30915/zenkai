@@ -32,6 +32,7 @@ const worker = new Worker<PostJobData>(
       imageUrl,
       caption: `${caption}\n\n${menuName}`,
       hashtags,
+      menuName,
       platforms: postTo,
     });
 
@@ -42,7 +43,7 @@ const worker = new Worker<PostJobData>(
         job_id: jobId,
         platform: result.platform,
         status: result.status,
-        post_url: result.postUrl || null,
+        post_url: result.url || null,
         error_message: result.error || null,
       });
     }
