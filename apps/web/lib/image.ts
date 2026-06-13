@@ -209,11 +209,15 @@ export async function processUploadedImage(
     });
   }
 
-  // 3. Normalize เป็นแนวตั้ง 9:16 (1080x1920) สำหรับ TikTok/Reels/Shorts
-  // (เดิมเป็น 1080x1080 → คลิปออกมาจัตุรัส ไม่เหมาะกับแพลตฟอร์มคลิปสั้น)
+  // 3. Normalize เป็นแนวตั้ง 9:16 (1080x1920) + เพิ่มคุณภาพอาหาร
+  // - Sharpen: ทำให้เนื้อสัตว์/ซอสชัดขึ้น
+  // - Saturation +20%: สีอาหารสดใส น่ากินกว่า
+  // - Contrast เล็กน้อย: ทำให้มิติ
   processed = await sharp(processed)
-    .resize(1080, 1920, { fit: "cover" })
-    .jpeg({ quality: 88 })
+    .resize(1080, 1920, { fit: "cover", position: "centre" })
+    .sharpen({ sigma: 0.8, m1: 0.5, m2: 0.5 })
+    .modulate({ saturation: 1.2, brightness: 1.02 })
+    .jpeg({ quality: 92, mozjpeg: true })
     .toBuffer();
 
   return processed;
