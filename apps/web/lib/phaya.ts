@@ -1,118 +1,95 @@
 /**
- * Phaya.io API Client — Updated June 2026
- * Models: Seedance Pro (Tier 1), Veo 3.1 (Tier 2/3)
- * Prompt: GPT-4o generates professional cinematic prompts
+ * Phaya.io — Video Generation (All Tiers)
+ * Tier 1: Seedance Pro  — 6 credits  (~24 บาท) — เหมือนถ่ายจริง
+ * Tier 2: Veo 3.1 Fast  — 15 credits (~60 บาท) — Google AI
+ * Tier 3: Veo 3.1 Quality — 50 credits (~200 บาท) — Premium สุด
  */
 
 import axios from "axios";
 import OpenAI from "openai";
-import { generateHailuoVideo, generateHailuoStandard } from "./fal";
 
-const BASE_URL = "https://api.phaya.io/api/v1";
-const api = () =>
-  axios.create({
-    baseURL: BASE_URL,
-    headers: { Authorization: `Bearer ${process.env.PHAYA_API_KEY!}`, "Content-Type": "application/json" },
-    timeout: 120000,
-  });
+const BASE = "https://api.phaya.io/api/v1";
+const api = () => axios.create({
+  baseURL: BASE,
+  headers: { Authorization: `Bearer ${process.env.PHAYA_API_KEY}`, "Content-Type": "application/json" },
+  timeout: 120000,
+});
 
-// ── Poll helper ────────────────────────────────────────────────
-async function pollStatus(
-  endpoint: string, jobId: string,
-  maxAttempts = 120, intervalMs = 5000
-): Promise<string> {
-  for (let i = 0; i < maxAttempts; i++) {
-    await new Promise(r => setTimeout(r, intervalMs));
-    const res = await api().get(`${endpoint}/${jobId}`);
-    const { status, video_url, image_url, audio_url } = res.data;
-    if (status === "completed" || status === "success") {
-      return video_url || image_url || audio_url || "";
-    }
-    if (status === "failed" || status === "error") {
-      throw new Error(`Phaya job failed: ${res.data.error || "unknown error"}`);
-    }
+// ─── Poll helper ────────────────────────────────────────────
+async function poll(endpoint: string, jobId: string, max = 120, ms = 5000): Promise<string> {
+  for (let i = 0; i < max; i++) {
+    await new Promise(r => setTimeout(r, ms));
+    const { data } = await api().get(`${endpoint}/${jobId}`);
+    const s = data.status;
+    if (s === "completed" || s === "success")
+      return data.video_url || data.image_url || data.audio_url || "";
+    if (s === "failed" || s === "error")
+      throw new Error(`Phaya job failed: ${data.error || "unknown"}`);
   }
   throw new Error("Phaya job timed out");
 }
 
-// ── GPT-4o: Generate PROFESSIONAL cinematic video prompt ───────
-// คีย์: prompt คือสิ่งที่ทำให้คลิปดูมืออาชีพหรือกระจอก
-async function generateCinematicPrompt(params: {
-  menuName: string;
-  menuNameEn?: string;
-  description?: string;
-  category?: string;
-}): Promise<string> {
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const { menuName, menuNameEn, description, category } = params;
-
-  const dish = menuNameEn || menuName;
-
-  const { choices } = await openai.chat.completions.create({
-    model: "gpt-4o",
-    max_tokens: 200,
-    temperature: 0.7,
-    messages: [{
-      role: "system",
-      content: `You are an expert food video director for luxury Japanese restaurants.
-Write a cinematic video prompt for AI video generation (Seedance model).
-The prompt MUST:
-- Be 40-80 words in English only
-- Describe MOTION first: what moves, how it moves (chopsticks lifting, steam curling, sauce dripping, broth rippling, chef hands, garnish being placed)
-- Include lighting: warm bokeh, shallow DOF, golden rim light, soft studio light
-- Include camera: slow push in, gentle orbit, top-down with slow zoom, macro close-up
-- Feel like a high-end restaurant commercial or Michelin star photography
-- NO text, NO watermarks, NO subtitles
-Output ONLY the prompt, nothing else.`
-    }, {
-      role: "user",
-      content: `Dish: ${dish}${description ? `\nDetails: ${description}` : ""}${category ? `\nCategory: ${category}` : ""}`
-    }]
-  });
-
-  return choices[0].message.content?.trim() ||
-    `${dish}, luxury Japanese restaurant close-up, chopsticks gently lifting, steam rising gracefully, glistening in warm golden light, shallow depth of field with soft bokeh, slow cinematic push-in, professional food photography`;
+// ─── GPT-4o: Cinematic food video prompt ─────────────────────
+async function buildPrompt(menuName: string, menuNameEn?: string, description?: string): Promise<string> {
+  try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const dish = menuNameEn || menuName;
+    const { choices } = await openai.chat.completions.create({
+      model: "gpt-4o", max_tokens: 150, temperature: 0.7,
+      messages: [{
+        role: "system",
+        content: "You are a luxury Japanese restaurant food video director. Write a 40-70 word cinematic video prompt for AI video generation. Describe motion (chopsticks lifting, steam rising, sauce dripping), camera move (slow push-in, macro), lighting (shallow DOF, warm bokeh, golden rim). English only. Output prompt only, no extra text.",
+      }, {
+        role: "user",
+        content: `Dish: ${dish}${description ? `\nDetails: ${description}` : ""}`,
+      }],
+    });
+    return choices[0].message.content?.trim() ||
+      `${dish}, Japanese restaurant cinematic close-up, chopsticks lifting gently, steam rising, shallow depth of field, warm golden bokeh, slow push-in`;
+  } catch {
+    return `${menuName}${menuNameEn ? ` ${menuNameEn}` : ""}, Japanese restaurant, cinematic food photography, steam rising, appetizing close-up, shallow DOF, warm lighting`;
+  }
 }
 
-// ── Seedance Pro (image-to-video) ──────────────────────────────
-// 6 credits / 8s — เหมือนถ่ายจริง
-async function generateSeedancePro(imageUrl: string, prompt: string): Promise<string> {
-  const res = await api().post("/seedance-video/create", {
+// ─── Tier 1: Seedance Pro (6 credits / 8s) ──────────────────
+async function seedancePro(imageUrl: string, prompt: string): Promise<string> {
+  const { data } = await api().post("/seedance-video/create", {
+    image_url: imageUrl, prompt, duration: "8",
+  });
+  return poll("/seedance-video/status", data.job_id, 80, 5000);
+}
+
+// ─── Tier 2: Veo 3.1 Fast (15 credits) ──────────────────────
+async function veo31Fast(imageUrl: string, prompt: string): Promise<string> {
+  const { data } = await api().post("/veo31-video/create", {
     image_url: imageUrl,
-    prompt,
-    duration: "8",
+    prompt: prompt + ", 9:16 vertical",
   });
-  return pollStatus("/seedance-video/status", res.data.job_id, 80, 5000);
+  return poll("/veo31-video/status", data.job_id, 100, 6000);
 }
 
-// ── Veo 3.1 (Google DeepMind) ─────────────────────────────────
-// 15 credits — Google AI คุณภาพสูงสุด
-async function generateVeo31(imageUrl: string, prompt: string): Promise<string> {
-  const res = await api().post("/veo31-video/create", {
+// ─── Tier 3: Veo 3.1 Quality (50 credits) ───────────────────
+async function veo31Quality(imageUrl: string, prompt: string): Promise<string> {
+  const { data } = await api().post("/veo31-video/create", {
     image_url: imageUrl,
-    prompt: prompt + ", 9:16 vertical format",
+    prompt: prompt + ", 9:16 vertical, ultra cinematic, Michelin star, award-winning food photography",
+    quality: "quality",
   });
-  return pollStatus("/veo31-video/status", res.data.job_id, 100, 6000);
+  return poll("/veo31-video/status", data.job_id, 120, 6000);
 }
 
-// ── Image-to-Video FFmpeg (Ken Burns) — fallback ──────────────
-async function generateImageToVideo(imageUrl: string): Promise<string> {
-  const PRESETS = [
-    { mode: "center",       speed: 0.002, max_scale: 1.8 },
-    { mode: "top_left",     speed: 0.0025, max_scale: 2.0 },
-    { mode: "pan_right",    speed: 0.003, max_scale: 1.5, pan_speed: 0.8 },
-    { mode: "pan_up",       speed: 0.002, max_scale: 1.6, pan_speed: 0.6 },
-  ] as const;
-  const preset = PRESETS[Math.floor(Date.now() / 10000) % PRESETS.length];
-  const res = await api().post("/image-to-video/create", {
+// ─── Image-to-Video FFmpeg (emergency fallback) ──────────────
+async function ffmpegFallback(imageUrl: string): Promise<string> {
+  const modes = ["center","pan_right","pan_up","top_left"] as const;
+  const mode = modes[Math.floor(Date.now() / 10000) % modes.length];
+  const { data } = await api().post("/image-to-video/create", {
     image_url: imageUrl, duration: 8, image_format: "jpeg",
-    zoom: { mode: preset.mode, speed: preset.speed, max_scale: preset.max_scale, pan_speed: "pan_speed" in preset ? preset.pan_speed : 1.0 },
+    zoom: { mode, speed: 0.002, max_scale: 1.8, pan_speed: 1.0 },
   });
-  return pollStatus("/image-to-video/status", res.data.job_id, 40, 2000);
+  return poll("/image-to-video/status", data.job_id, 40, 2000);
 }
 
-// ── MAIN ENTRY POINT ───────────────────────────────────────────
-// tier: fast=Seedance, quality=Veo3.1, premium=Veo3.1 enhanced
+// ─── MAIN ENTRY POINT ─────────────────────────────────────────
 export async function generateFoodVideoPhaya(params: {
   imageUrl: string;
   menuName: string;
@@ -121,51 +98,31 @@ export async function generateFoodVideoPhaya(params: {
   category?: string;
   tier: "fast" | "quality" | "premium";
 }): Promise<string> {
-  const { imageUrl, tier } = params;
+  const { imageUrl, menuName, menuNameEn, description, tier } = params;
 
-  // Generate professional cinematic prompt via GPT-4o
-  const prompt = await generateCinematicPrompt({
-    menuName: params.menuName,
-    menuNameEn: params.menuNameEn,
-    description: params.description,
-    category: params.category,
-  });
+  // GPT-4o สร้าง prompt ระดับมืออาชีพ
+  const prompt = await buildPrompt(menuName, menuNameEn, description);
+  console.log(`[phaya] tier=${tier} prompt="${prompt.substring(0, 80)}..."`);
 
-  console.log(`[phaya] Tier: ${tier} | Prompt: ${prompt}`);
-
-  if (tier === "fast") {
-    // Hailuo Standard 768p — $0.28/6s, ถูกสุด, คุณภาพดี
-    if (process.env.FAL_API_KEY) {
-      try { return await generateHailuoStandard({ imageUrl, prompt }); }
-      catch (e) { console.warn("[phaya] Hailuo Standard failed, fallback Seedance:", e); }
-    }
-    return generateSeedancePro(imageUrl, prompt);
+  try {
+    if (tier === "fast")    return await seedancePro(imageUrl, prompt);
+    if (tier === "quality") return await veo31Fast(imageUrl, prompt);
+    /* premium */           return await veo31Quality(imageUrl, prompt);
+  } catch (err) {
+    // Fallback: ถ้า Phaya credits หมดหรือ error ใช้ FFmpeg
+    console.warn("[phaya] AI video failed, using FFmpeg fallback:", err instanceof Error ? err.message : err);
+    return ffmpegFallback(imageUrl);
   }
-  if (tier === "quality") {
-    // Hailuo Pro 1080p — $0.49/6s, คุณภาพสูง
-    if (process.env.FAL_API_KEY) {
-      try { return await generateHailuoVideo({ imageUrl, prompt }); }
-      catch (e) { console.warn("[phaya] Hailuo Pro failed, fallback Seedance:", e); }
-    }
-    return generateSeedancePro(imageUrl, prompt);
-  }
-  // Premium: Veo 3.1 — Google AI สูงสุด
-  const premiumPrompt = prompt + ", ultra cinematic, award-winning food photography, Michelin star presentation";
-  if (process.env.FAL_API_KEY) {
-    try { return await generateHailuoVideo({ imageUrl, prompt: premiumPrompt }); }
-    catch (e) { console.warn("[phaya] Hailuo Premium failed, fallback Veo:", e); }
-  }
-  return generateVeo31(imageUrl, premiumPrompt);
 }
 
-// ── TTS (Thai voice) ──────────────────────────────────────────
+// ─── TTS ─────────────────────────────────────────────────────
 export async function phayaTTS(text: string): Promise<string> {
-  const res = await api().post("/text-to-speech/generate", { prompt: text });
-  return pollStatus("/text-to-speech/status", res.data.job_id);
+  const { data } = await api().post("/text-to-speech/generate", { prompt: text });
+  return poll("/text-to-speech/status", data.job_id);
 }
 
-// ── Merge audio + video ───────────────────────────────────────
-export async function phayaMergeAudioVideo(params: { videoUrl: string; audioUrl: string }): Promise<string> {
-  const res = await api().post("/media/merge-audio-video", { video_url: params.videoUrl, audio_url: params.audioUrl });
-  return pollStatus("/media/status", res.data.job_id);
+// ─── Merge Audio + Video ──────────────────────────────────────
+export async function phayaMergeAudioVideo(p: { videoUrl: string; audioUrl: string }): Promise<string> {
+  const { data } = await api().post("/media/merge-audio-video", { video_url: p.videoUrl, audio_url: p.audioUrl });
+  return poll("/media/status", data.job_id);
 }
