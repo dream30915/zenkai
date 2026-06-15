@@ -99,13 +99,34 @@ const getMenus: Tool = {
   },
   run: async (args) => {
     const limit = Math.min(Number(args.limit) || 20, 50);
-    const { data, error } = await supabaseAdmin
-      .from("menus")
-      .select("name_th, name_en, category, price, description, is_available")
-      .order("sort_order", { ascending: true })
-      .limit(limit);
-    if (error) return ok({ error: error.message });
-    return ok({ count: data?.length ?? 0, menus: data ?? [] });
+    const COLS = "name_th, name_en, category, price, description, is_available";
+    let data: Record<string, unknown>[] | null = null;
+    let errMsg: string | null = null;
+    {
+      const r = await supabaseAdmin
+        .from("menus")
+        .select(`${COLS}, image_urls`)
+        .order("sort_order", { ascending: true })
+        .limit(limit);
+      data = (r.data as Record<string, unknown>[] | null);
+      errMsg = r.error?.message ?? null;
+    }
+    // image_urls อาจยังไม่มี (ยังไม่ได้รัน migration 002) → ถอยไป select แบบไม่มีรูป
+    if (errMsg && errMsg.toLowerCase().includes("image_urls")) {
+      const r = await supabaseAdmin
+        .from("menus")
+        .select(COLS)
+        .order("sort_order", { ascending: true })
+        .limit(limit);
+      data = (r.data as Record<string, unknown>[] | null);
+      errMsg = r.error?.message ?? null;
+    }
+    if (errMsg) return ok({ error: errMsg });
+    const menus = (data ?? []).map((m) => ({
+      ...m,
+      has_photo: Array.isArray(m.image_urls) && m.image_urls.length > 0,
+    }));
+    return ok({ count: menus.length, menus });
   },
 };
 

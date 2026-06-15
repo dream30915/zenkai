@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Plus, Edit2, Trash2, Play, Loader2, AlertCircle,
-  ChefHat, Search, Filter,
+  ChefHat, Search, Filter, ImagePlus, X,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ interface Menu {
   price?: number;
   description?: string;
   is_available: boolean;
+  image_urls?: string[];
   created_at: string;
 }
 
@@ -38,8 +39,33 @@ function MenuModal({
     price: menu?.price?.toString() || "",
     description: menu?.description || "",
     is_available: menu?.is_available ?? true,
+    image_urls: menu?.image_urls || ([] as string[]),
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { toast.error("รูปต้องไม่เกิน 8MB"); return; }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await fetch("/api/menu-image", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.message || "upload failed");
+      setForm((f) => ({ ...f, image_urls: [...f.image_urls, data.url] }));
+    } catch {
+      toast.error("อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = (url: string) =>
+    setForm((f) => ({ ...f, image_urls: f.image_urls.filter((u) => u !== url) }));
 
   const handleSave = async () => {
     if (!form.name_th.trim()) { toast.error("ต้องมีชื่อเมนู"); return; }
@@ -53,6 +79,7 @@ function MenuModal({
         price: form.price ? parseFloat(form.price) : undefined,
         description: form.description || undefined,
         is_available: form.is_available,
+        image_urls: form.image_urls,
       };
       await fetch("/api/menus", {
         method: menu ? "PATCH" : "POST",
@@ -92,6 +119,30 @@ function MenuModal({
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sakura-300"
               placeholder="e.g. Miso Ramen"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">รูปอาหาร (ใช้ทำวิดีโอ)</label>
+            <div className="flex flex-wrap gap-2">
+              {form.image_urls.map((url) => (
+                <div key={url} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="menu" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(url)}
+                    className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+              <label className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center cursor-pointer hover:border-sakura-300 hover:bg-sakura-50 transition-colors">
+                {uploading
+                  ? <Loader2 className="w-5 h-5 text-sakura-400 animate-spin" />
+                  : <ImagePlus className="w-5 h-5 text-gray-400" />}
+                <input type="file" accept="image/*" onChange={handleImage} disabled={uploading} className="hidden" />
+              </label>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -241,6 +292,10 @@ export default function MenuCatalog() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((menu) => (
             <div key={menu.id} className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-sakura-200 hover:shadow-sm transition-all">
+              {menu.image_urls && menu.image_urls.length > 0 && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={menu.image_urls[0]} alt={menu.name_th} className="w-full h-32 object-cover rounded-xl mb-3" />
+              )}
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 truncate">{menu.name_th}</h3>

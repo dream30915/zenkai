@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Home, Upload, BookOpen, Briefcase, BarChart2, Settings, HelpCircle, Sparkles, CalendarDays, CreditCard } from "lucide-react";
+import { Home, Upload, BookOpen, Briefcase, BarChart2, Settings, HelpCircle, Sparkles, CalendarDays } from "lucide-react";
 import { clsx } from "clsx";
 
 interface LiveStatus {
@@ -19,7 +19,6 @@ const navItems = [
   { href: "/jobs",      icon: Briefcase,   label: "งานทั้งหมด" },
   { href: "/analytics", icon: BarChart2,   label: "Analytics"  },
   { href: "/settings",  icon: Settings,    label: "ตั้งค่า"     },
-  { href: "/billing",   icon: CreditCard,  label: "แพ็กเกจ"    },
   { href: "/planner",   icon: CalendarDays, label: "แผนคอนเทนต์" },
   { href: "/agent",     icon: Sparkles,    label: "AI Agent"    },
   { href: "/guide",     icon: HelpCircle,  label: "วิธีใช้งาน" },

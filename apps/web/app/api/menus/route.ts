@@ -9,7 +9,18 @@ const MenuSchema = z.object({
   price: z.coerce.number().optional(),
   description: z.string().optional(),
   is_available: z.boolean().default(true),
+  image_urls: z.array(z.string()).optional(),
 });
+
+// PostgREST คืน error เมื่อ column ยังไม่มี (เช่นยังไม่ได้รัน migration image_urls).
+// ฟังก์ชันนี้ช่วยให้ระบบไม่พัง: ถ้า error พาดพิง image_urls → ลองใหม่โดยตัดทิ้ง.
+function missingImageColumn(err: unknown): boolean {
+  const msg = (err && typeof err === "object" && "message" in err
+    ? String((err as { message: unknown }).message)
+    : String(err)
+  ).toLowerCase();
+  return msg.includes("image_urls");
+}
 
 export async function GET() {
   try {
@@ -34,7 +45,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: parsed.error.errors[0].message }, { status: 400 });
     }
     const supabase = await createClient();
-    const { data, error } = await supabase.from("menus").insert(parsed.data).select().single();
+    let { data, error } = await supabase.from("menus").insert(parsed.data).select().single();
+    if (error && missingImageColumn(error)) {
+      const { image_urls: _drop, ...rest } = parsed.data;
+      ({ data, error } = await supabase.from("menus").insert(rest).select().single());
+    }
     if (error) throw error;
     return NextResponse.json({ menu: data });
   } catch (err: unknown) {
@@ -47,7 +62,11 @@ export async function PATCH(req: NextRequest) {
     const { id, ...fields } = await req.json();
     if (!id) return NextResponse.json({ message: "id required" }, { status: 400 });
     const supabase = await createClient();
-    const { data, error } = await supabase.from("menus").update(fields).eq("id", id).select().single();
+    let { data, error } = await supabase.from("menus").update(fields).eq("id", id).select().single();
+    if (error && missingImageColumn(error)) {
+      const { image_urls: _drop, ...rest } = fields;
+      ({ data, error } = await supabase.from("menus").update(rest).eq("id", id).select().single());
+    }
     if (error) throw error;
     return NextResponse.json({ menu: data });
   } catch (err: unknown) {
