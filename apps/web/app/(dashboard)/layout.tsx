@@ -2,8 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import { Home, Upload, BookOpen, Briefcase, BarChart2, Settings, HelpCircle, Sparkles, CalendarDays, CreditCard } from "lucide-react";
 import { clsx } from "clsx";
+
+interface LiveStatus {
+  phaya_credit_thb?: number | null;
+  queue_video?: { waiting?: number; active?: number; failed?: number };
+  queue_post?: { waiting?: number; active?: number };
+}
 
 const navItems = [
   { href: "/",          icon: Home,        label: "หน้าหลัก",    exact: true },
@@ -28,6 +35,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
+
+  // Live system status (Phaya credit + queue), refreshed every 60s.
+  const [status, setStatus] = useState<LiveStatus | null>(null);
+  useEffect(() => {
+    let on = true;
+    const load = () =>
+      fetch("/api/status")
+        .then((r) => r.json())
+        .then((d) => { if (on) setStatus(d); })
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 60000);
+    return () => { on = false; clearInterval(t); };
+  }, []);
+  const credit = status?.phaya_credit_thb;
+  const vq = status?.queue_video || {};
+  const lowCredit = typeof credit === "number" && credit < 3;
 
   return (
     <div className="min-h-screen flex bg-washi-50">
@@ -72,6 +96,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
         </nav>
+
+        {/* Live system status */}
+        <div className="px-4 py-4 border-t border-sumi-800">
+          <p className="text-[10px] font-medium text-sumi-500 uppercase tracking-widest mb-2">ระบบสด</p>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-sumi-400">เครดิต Phaya</span>
+              <span className={clsx("text-xs font-semibold", lowCredit ? "text-beni-400" : "text-kin-300")}>
+                {typeof credit === "number" ? `${credit.toFixed(2)} ฿` : "—"}
+                {lowCredit ? " ⚠️" : ""}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-sumi-400">คิววิดีโอ</span>
+              <span className="text-xs text-sumi-300">
+                รอ {vq.waiting ?? "—"} · ทำ {vq.active ?? 0}
+                {vq.failed ? ` · ✗${vq.failed}` : ""}
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* API Status */}
         <div className="px-4 py-4 border-t border-sumi-800">
