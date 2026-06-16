@@ -57,3 +57,8 @@ test-results/
 
 # Nested git clones (อย่า commit folder ที่ clone ผิดที่)
 kaizen/
+
+# local backups & logs (never commit)
+*.bak
+*.bak-*
+*.log
