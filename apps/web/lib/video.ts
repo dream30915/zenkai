@@ -13,6 +13,7 @@
 
 import axios from "axios";
 import { generateFoodVideoPhaya } from "./phaya";
+import { generateLocalVideo } from "./localvideo";
 
 export type VideoTier = "tier1" | "tier2" | "tier3";
 
@@ -20,7 +21,7 @@ export interface VideoResult {
   url: string;
   duration: number;
   tier: VideoTier;
-  provider: "phaya" | "creatomate";
+  provider: "phaya" | "creatomate" | "local";
 }
 
 // ----------------------------------------------------------------
@@ -36,29 +37,42 @@ export async function generateVideo(params: {
 }): Promise<VideoResult> {
   const { imageUrl, menuName, menuNameEn, price, hookText, tier } = params;
 
-  const hasPhaya = !!process.env.PHAYA_API_KEY;
-  const hasCreatomate = !!process.env.CREATOMATE_API_KEY;
+  const forceLocal = process.env.VIDEO_PROVIDER === "local";
+  const hasPhaya = !forceLocal && !!process.env.PHAYA_API_KEY;
+  const hasCreatomate = !forceLocal && !!process.env.CREATOMATE_API_KEY;
+  const dur = tier === "tier1" ? 10 : 15;
+
+  // 0) Local FFmpeg — primary เมื่อ VIDEO_PROVIDER=local (ฟรี เหมาะใช้ส่วนตัว)
+  if (forceLocal) {
+    const url = await generateLocalVideo({ imageUrl, durationSec: dur });
+    return { url, duration: dur, tier, provider: "local" };
+  }
 
   // 1) Phaya — primary
   if (hasPhaya) {
     try {
       const phayaTier = tier === "tier1" ? "fast" : tier === "tier2" ? "quality" : "premium";
       const url = await generateFoodVideoPhaya({ imageUrl, menuName, menuNameEn, tier: phayaTier });
-      return { url, duration: tier === "tier1" ? 10 : 15, tier, provider: "phaya" };
+      return { url, duration: dur, tier, provider: "phaya" };
     } catch (err) {
       console.error("[video] Phaya failed:", err);
-      if (!hasCreatomate) throw err; // ไม่มี fallback — ส่ง error ขึ้นไปให้ BullMQ retry
+      // ตกไปใช้ fallback ด้านล่าง (Creatomate ถ้ามี key, ไม่งั้น local ffmpeg)
     }
   }
 
-  // 2) Creatomate — fallback (หรือ primary ถ้าไม่มี PHAYA_API_KEY)
+  // 2) Creatomate — fallback (ถ้ามี key)
   if (hasCreatomate) {
-    return generateCreatomateVideo({ imageUrl, menuName, menuNameEn, price, hookText });
+    try {
+      return await generateCreatomateVideo({ imageUrl, menuName, menuNameEn, price, hookText });
+    } catch (err) {
+      console.error("[video] Creatomate failed:", err);
+    }
   }
 
-  throw new Error(
-    "ไม่มี video provider — ตั้งค่า PHAYA_API_KEY (แนะนำ) หรือ CREATOMATE_API_KEY ใน .env.local"
-  );
+  // 3) Local FFmpeg — fallback สุดท้าย (ฟรี ไม่ต้องมี provider/credit ใด ๆ)
+  console.warn("[video] ใช้ local ffmpeg fallback (ไม่มี provider พร้อมใช้ / เครดิตหมด)");
+  const url = await generateLocalVideo({ imageUrl, durationSec: dur });
+  return { url, duration: dur, tier, provider: "local" };
 }
 
 // backward-compat alias (โค้ดเดิมบางจุดเรียก generateVideoAuto)
