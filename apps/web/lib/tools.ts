@@ -58,6 +58,10 @@ const systemStatus: Tool = {
     } catch (e) {
       out.phaya_error = e instanceof Error ? e.message : "credit check failed";
     }
+    // readiness flags ตามจริง (กันแสดงไฟเขียวปลอม)
+    out.phaya_ready = !!process.env.PHAYA_API_KEY && out.phaya_error === undefined;
+    out.openai_ready = !!process.env.OPENAI_API_KEY;
+    out.supabase_ready = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
     return ok(out);
   },
 };

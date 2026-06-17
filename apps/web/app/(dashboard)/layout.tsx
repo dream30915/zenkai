@@ -8,6 +8,10 @@ import { clsx } from "clsx";
 
 interface LiveStatus {
   phaya_credit_thb?: number | null;
+  phaya_ready?: boolean;
+  openai_ready?: boolean;
+  supabase_ready?: boolean;
+  queue_error?: string;
   queue_video?: { waiting?: number; active?: number; failed?: number };
   queue_post?: { waiting?: number; active?: number };
 }
@@ -25,11 +29,25 @@ const navItems = [
   { href: "/guide",     icon: HelpCircle,  label: "วิธีใช้งาน" },
 ];
 
-const apiStatus = [
-  { label: "Phaya.io", env: "PHAYA_API_KEY" },
-  { label: "Supabase", env: "NEXT_PUBLIC_SUPABASE_URL" },
-  { label: "OpenAI",   env: "OPENAI_API_KEY" },
-];
+type ApiState = "ready" | "warn" | "down" | "unknown";
+
+function ApiRow({ label, state, downText = "ออฟไลน์" }: { label: string; state: ApiState; downText?: string }) {
+  const cfg = {
+    ready:   { dot: "bg-seiji-500", pulse: true,  text: "พร้อม",      cls: "text-seiji-500" },
+    warn:    { dot: "bg-kin-400",   pulse: false, text: "เครดิตหมด", cls: "text-kin-300" },
+    down:    { dot: "bg-beni-500",  pulse: false, text: downText,     cls: "text-beni-400" },
+    unknown: { dot: "bg-sumi-600",  pulse: false, text: "…",          cls: "text-sumi-500" },
+  }[state];
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-sumi-400">{label}</span>
+      <span className={clsx("flex items-center gap-1 text-xs", cfg.cls)}>
+        <span className={clsx("w-1.5 h-1.5 rounded-full", cfg.dot, cfg.pulse && "animate-pulse")} />
+        {cfg.text}
+      </span>
+    </div>
+  );
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -52,6 +70,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const credit = status?.phaya_credit_thb;
   const vq = status?.queue_video || {};
   const lowCredit = typeof credit === "number" && credit < 3;
+  const phayaState: ApiState = !status
+    ? "unknown"
+    : !status.phaya_ready
+    ? "down"
+    : typeof credit === "number" && credit <= 0
+    ? "warn"
+    : "ready";
 
   return (
     <div className="min-h-screen flex bg-washi-50">
@@ -118,19 +143,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
 
-        {/* API Status */}
+        {/* API Status — สะท้อนสถานะจริง */}
         <div className="px-4 py-4 border-t border-sumi-800">
           <p className="text-[10px] font-medium text-sumi-500 uppercase tracking-widest mb-2">สถานะ API</p>
           <div className="space-y-1.5">
-            {apiStatus.map(({ label }) => (
-              <div key={label} className="flex items-center justify-between">
-                <span className="text-xs text-sumi-400">{label}</span>
-                <span className="flex items-center gap-1 text-seiji-500 text-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-seiji-500 animate-pulse" />
-                  พร้อม
-                </span>
-              </div>
-            ))}
+            <ApiRow label="Phaya.io" state={phayaState} />
+            <ApiRow label="OpenAI" state={status ? (status.openai_ready ? "ready" : "down") : "unknown"} downText="ไม่มีคีย์" />
+            <ApiRow label="Supabase" state={status ? (status.supabase_ready ? "ready" : "down") : "unknown"} downText="ไม่ตั้งค่า" />
+            <ApiRow label="คิวงาน (Redis)" state={status ? (status.queue_error ? "down" : "ready") : "unknown"} downText="ออฟไลน์" />
           </div>
         </div>
       </aside>
