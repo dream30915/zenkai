@@ -1,7 +1,7 @@
+"use client";
+
 import Link from "next/link";
 import { Upload, BookOpen, Briefcase, BarChart2, ArrowRight } from "lucide-react";
-
-export const metadata = { title: "全開 Zenkai — AI Content Studio" };
 
 const ACTIONS = [
   {

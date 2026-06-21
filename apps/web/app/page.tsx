@@ -1,2 +1,5 @@
-// Root: handled by (dashboard)/page.tsx
-export { default } from "@/app/(dashboard)/page";
+import DashboardHome from "@/components/home/DashboardHome";
+
+export default function Page() {
+  return <DashboardHome />;
+}

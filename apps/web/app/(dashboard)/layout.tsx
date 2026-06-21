@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Home, Upload, BookOpen, Briefcase, BarChart2, Settings, HelpCircle, Sparkles, CalendarDays, Activity } from "lucide-react";
+import { Home, Upload, BookOpen, Briefcase, BarChart2, Settings, HelpCircle, Sparkles, CalendarDays, Activity, Megaphone } from "lucide-react";
 import { clsx } from "clsx";
 
 interface LiveStatus {
@@ -23,6 +23,7 @@ const navItems = [
   { href: "/menus",     icon: BookOpen,    label: "คลังเมนู"   },
   { href: "/jobs",      icon: Briefcase,   label: "งานทั้งหมด" },
   { href: "/analytics", icon: BarChart2,   label: "Analytics"  },
+  { href: "/marketing", icon: Megaphone,   label: "การตลาด"    },
   { href: "/settings",  icon: Settings,    label: "ตั้งค่า"     },
   { href: "/planner",   icon: CalendarDays, label: "แผนคอนเทนต์" },
   { href: "/agent",     icon: Sparkles,    label: "AI Agent"    },
@@ -143,7 +144,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
 
-        {/* API Status — สะท้อนสถานะจริง */}
+        {/* API Status */}
         <div className="px-4 py-4 border-t border-sumi-800">
           <p className="text-[10px] font-medium text-sumi-500 uppercase tracking-widest mb-2">สถานะ API</p>
           <div className="space-y-1.5">
