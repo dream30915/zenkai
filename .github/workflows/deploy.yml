@@ -5,7 +5,6 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  # Vercel deploy สั่งรันเองจากแท็บ Actions เท่านั้น (ต้องตั้ง secrets ก่อน)
   workflow_dispatch:
 
 jobs:
@@ -15,36 +14,32 @@ jobs:
   check:
     name: Type Check
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/web
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: apps/web/package-lock.json
 
       - name: Install dependencies
+        working-directory: apps/web
         run: npm ci
 
       - name: Type check
+        working-directory: apps/web
         run: npm run type-check
 
       - name: Lint
+        working-directory: apps/web
         run: npm run lint
 
   # ----------------------------------------------------------
-  # Deploy to Vercel (main branch only)
+  # Deploy to Vercel (manual trigger only)
   # ----------------------------------------------------------
   deploy:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
     needs: check
-    # รันเฉพาะกดสั่งเองจากแท็บ Actions — กัน fail ฟรีตอนยังไม่ได้ตั้ง VERCEL_* secrets
-    # หมายเหตุ: เว็บรันบน Vercel ได้ แต่ workers/Redis/n8n ต้องอยู่บน VPS เสมอ
     if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
