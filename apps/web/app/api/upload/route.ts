@@ -5,36 +5,49 @@ import { uploadToR2 } from "@/lib/storage";
 import { addVideoJob } from "@/lib/queue";
 import { createClient } from "@/lib/supabase/server";
 
-// ----------------------------------------------------------------
-// Validation Schema
-// ----------------------------------------------------------------
+const MAX_IMAGE_FILES = 5;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_TOTAL_IMAGE_BYTES = 24 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const IMAGE_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+const ALLOWED_POST_TARGETS = new Set(["line", "facebook", "instagram", "tiktok"]);
+
+function parsePostTargets(value: string): string[] {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(value);
+  } catch {
+    raw = value;
+  }
+
+  const values = Array.isArray(raw) ? raw : [raw];
+  return values
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => ALLOWED_POST_TARGETS.has(item));
+}
+
 const UploadSchema = z.object({
-  menuName: z.string().min(1, "ชื่อเมนูห้ามว่าง"),
+  menuName: z.string().min(1, "menuName is required"),
   menuNameEn: z.string().optional(),
   price: z.string().optional(),
   description: z.string().optional(),
   videoTier: z.enum(["tier1", "tier2", "tier3"]).default("tier1"),
-  postTo: z.string().transform((v) => {
-    try {
-      return JSON.parse(v) as string[];
-    } catch {
-      return [v];
-    }
-  }),
+  postTo: z.string().transform(parsePostTargets),
   scheduleType: z.enum(["now", "schedule"]).default("now"),
   scheduleAt: z.string().optional(),
 });
 
-// ----------------------------------------------------------------
-// POST /api/upload
-// ----------------------------------------------------------------
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
 
-    // Parse fields
     const fields = Object.fromEntries(
-      Array.from(formData.entries()).filter(([, v]) => typeof v === "string")
+      Array.from(formData.entries()).filter(([, value]) => typeof value === "string")
     );
     const parsed = UploadSchema.safeParse(fields);
     if (!parsed.success) {
@@ -44,29 +57,58 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Parse images
-    const imageFiles = formData.getAll("images") as File[];
+    const imageFiles = formData
+      .getAll("images")
+      .filter((file): file is File => file instanceof File);
+
     if (imageFiles.length === 0) {
       return NextResponse.json(
-        { message: "ต้องมีรูปอย่างน้อย 1 รูป" },
+        { message: "At least one image is required" },
+        { status: 400 }
+      );
+    }
+    if (imageFiles.length > MAX_IMAGE_FILES) {
+      return NextResponse.json(
+        { message: `Upload up to ${MAX_IMAGE_FILES} images per job` },
+        { status: 400 }
+      );
+    }
+
+    let totalBytes = 0;
+    for (const file of imageFiles) {
+      totalBytes += file.size;
+      if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+        return NextResponse.json(
+          { message: "Only JPG, PNG, and WebP images are allowed" },
+          { status: 400 }
+        );
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        return NextResponse.json(
+          { message: "Each image must be 8MB or smaller" },
+          { status: 400 }
+        );
+      }
+    }
+    if (totalBytes > MAX_TOTAL_IMAGE_BYTES) {
+      return NextResponse.json(
+        { message: "Total upload size must be 24MB or smaller" },
         { status: 400 }
       );
     }
 
     const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-    // Step 1: Upload images to R2
     const imageUrls: string[] = [];
+
     for (const file of imageFiles) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const ext = file.name.split(".").pop() || "jpg";
-      const key = `uploads/${jobId}/${Date.now()}.${ext}`;
+      const ext = IMAGE_EXTENSIONS[file.type] || "bin";
+      const key = `uploads/${jobId}/${Date.now()}_${imageUrls.length}.${ext}`;
       const url = await uploadToR2(buffer, key, file.type);
       imageUrls.push(url);
     }
 
-    // Step 2: Generate AI script
     const { menuName, menuNameEn, price, description, videoTier, postTo, scheduleAt } = parsed.data;
     const content = await generateMenuContent({
       menuName,
@@ -74,15 +116,14 @@ export async function POST(req: NextRequest) {
       price,
       description,
     });
-    const script = JSON.stringify(content); // เก็บลงคอลัมน์ script เดิมเป็น JSON string
+    const script = JSON.stringify(content);
 
-    // Step 3: Save job to Supabase
     const supabase = await createClient();
     const { error: dbError } = await supabase.from("jobs").insert({
       id: jobId,
       menu_name: menuName,
       menu_name_en: menuNameEn,
-      price: price ? parseInt(price) : null,
+      price: price ? parseInt(price, 10) : null,
       description,
       video_tier: videoTier,
       post_to: postTo,
@@ -93,16 +134,19 @@ export async function POST(req: NextRequest) {
     });
 
     if (dbError) {
-      // Fail fast — ถ้า insert ไม่ผ่านแล้วปล่อย job เข้า queue ต่อ
-      // worker จะ update แถวที่ไม่มีอยู่จริง → job หายจาก dashboard เงียบ ๆ
-      console.error("DB insert error:", dbError);
+      console.error(JSON.stringify({
+        level: "error",
+        route: "/api/upload",
+        step: "db_insert",
+        job_id: jobId,
+        error: dbError.message,
+      }));
       return NextResponse.json(
-        { message: `บันทึก job ลงฐานข้อมูลไม่สำเร็จ: ${dbError.message}` },
+        { message: `Failed to save job: ${dbError.message}` },
         { status: 500 }
       );
     }
 
-    // Step 4: Add to BullMQ queue
     await addVideoJob({
       jobId,
       menuName,
@@ -125,8 +169,13 @@ export async function POST(req: NextRequest) {
       message: "Job queued successfully",
     });
   } catch (err: unknown) {
-    console.error("[/api/upload] Error:", err);
     const message = err instanceof Error ? err.message : "Internal server error";
+    console.error(JSON.stringify({
+      level: "error",
+      route: "/api/upload",
+      step: "unhandled",
+      error: message,
+    }));
     return NextResponse.json({ message }, { status: 500 });
   }
 }

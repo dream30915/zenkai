@@ -165,6 +165,21 @@ export async function postToAll(params: {
   const { videoUrl, caption, hashtags, platforms } = params;
   const results: PostResult[] = [];
 
+  if (process.env.EXTERNAL_POSTING_ENABLED !== "true") {
+    console.info(JSON.stringify({
+      level: "info",
+      step: "external_posting_skipped",
+      dry_run: true,
+      platforms,
+    }));
+
+    return platforms.map((platform) => ({
+      platform,
+      status: "skipped",
+      error: "external posting disabled; set EXTERNAL_POSTING_ENABLED=true after owner approval",
+    }));
+  }
+
   const handlers: Record<string, () => Promise<PostResult>> = {
     line:      () => postToLine({ videoUrl, caption, hashtags }),
     facebook:  () => postToFacebook({ videoUrl, caption, hashtags }),

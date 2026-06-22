@@ -74,5 +74,6 @@ systemctl restart zenkai-web
 log "เสร็จแล้ว! 🎉"
 echo ""
 echo "  🌐 https://$DOMAIN"
-echo "  🔑 login: admin / kaizen123"
+echo "  🔑 login user: ${BASIC_AUTH_USER:-admin}"
+echo "  🔑 password  : value from BASIC_AUTH_PASSWORD in $ENV"
 echo "  🔄 cert ต่ออายุอัตโนมัติทุก 90 วัน"

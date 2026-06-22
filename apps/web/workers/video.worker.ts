@@ -30,6 +30,7 @@ import { notifyJobDone, notifyJobError } from "../lib/notify";
 import { supabaseAdmin } from "../lib/supabase/admin";
 
 const ENABLE_TTS = process.env.ENABLE_TTS === "true";
+const AUTO_QUEUE_POSTS = process.env.AUTO_QUEUE_POSTS === "true";
 
 // ----------------------------------------------------------------
 // Worker
@@ -118,15 +119,24 @@ const worker = new Worker<VideoJobData>(
       // ----------------------------------------
       // Step 5: Queue post job
       // ----------------------------------------
-      await getPostQueue().add("post", {
-        jobId,
-        videoUrl: finalVideoUrl,
-        imageUrl: processedUrl,
-        caption: content.caption,
-        hashtags: content.hashtags,
-        postTo,
-        menuName,
-      });
+      if (AUTO_QUEUE_POSTS && postTo.length > 0) {
+        await getPostQueue().add("post", {
+          jobId,
+          videoUrl: finalVideoUrl,
+          imageUrl: processedUrl,
+          caption: content.caption,
+          hashtags: content.hashtags,
+          postTo,
+          menuName,
+        });
+      } else {
+        console.info(JSON.stringify({
+          level: "info",
+          step: "post_queue_skipped",
+          job_id: jobId,
+          reason: AUTO_QUEUE_POSTS ? "no_post_targets" : "AUTO_QUEUE_POSTS_not_enabled",
+        }));
+      }
 
       // ----------------------------------------
       // Step 6: Telegram notification
@@ -136,7 +146,7 @@ const worker = new Worker<VideoJobData>(
         menuName,
         videoUrl: finalVideoUrl,
         thumbnailUrl: processedUrl,
-        postedTo: postTo,
+        postedTo: AUTO_QUEUE_POSTS ? postTo : [],
       });
 
       await job.updateProgress(100);

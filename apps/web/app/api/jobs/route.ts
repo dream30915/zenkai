@@ -5,8 +5,14 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { searchParams } = new URL(req.url);
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const offset = parseInt(searchParams.get("offset") || "0");
+    const requestedLimit = Number.parseInt(searchParams.get("limit") || "20", 10);
+    const requestedOffset = Number.parseInt(searchParams.get("offset") || "0", 10);
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(Math.max(requestedLimit, 1), 100)
+      : 20;
+    const offset = Number.isFinite(requestedOffset)
+      ? Math.max(requestedOffset, 0)
+      : 0;
 
     const { data, error, count } = await supabase
       .from("jobs")
