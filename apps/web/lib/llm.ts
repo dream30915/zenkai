@@ -95,12 +95,21 @@ export async function streamChat(
   for (const c of chain) {
     if (!hasKey(c.provider)) continue;
     try {
-      if (c.provider === "anthropic") {
-        const it = await anthropicStream(system, messages, c.model, maxTokens, temperature);
-        return { iterator: it, model: `claude:${c.model}` };
+      const raw =
+        c.provider === "anthropic"
+          ? await anthropicStream(system, messages, c.model, maxTokens, temperature)
+          : await openaiStream(clientFor(c.provider), c.provider, system, messages, c.model, maxTokens, temperature);
+      const label = c.provider === "anthropic" ? `claude:${c.model}` : `${c.provider}:${c.model}`;
+
+      // Pull the first token INSIDE the try so deferred 4xx errors (e.g. Anthropic
+      // .stream() only rejects on first read — low credit/auth) trigger fallback
+      // here instead of blowing up the caller mid-iteration.
+      const first = await raw.next();
+      async function* withFirst(): AsyncGenerator<string> {
+        if (!first.done && first.value) yield first.value;
+        yield* raw;
       }
-      const it = await openaiStream(clientFor(c.provider), c.provider, system, messages, c.model, maxTokens, temperature);
-      return { iterator: it, model: `${c.provider}:${c.model}` };
+      return { iterator: withFirst(), model: label };
     } catch (err) {
       lastErr = err;
       console.warn(`[llm] ${c.provider}:${c.model} unavailable → next`, err instanceof Error ? err.message : err);

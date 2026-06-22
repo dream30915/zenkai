@@ -98,11 +98,11 @@ const getMenus: Tool = {
   description: "ดึงคลังเมนูอาหารของร้าน (ชื่อไทย/อังกฤษ หมวด ราคา คำอธิบาย) ไว้ใช้เขียนแคปชั่น/พรอมป์",
   parameters: {
     type: "object",
-    properties: { limit: { type: "integer", description: "จำนวนเมนู (ค่าเริ่มต้น 20)" } },
+    properties: { limit: { type: "integer", description: "จำนวนเมนู (ค่าเริ่มต้น 50)" } },
     additionalProperties: false,
   },
   run: async (args) => {
-    const limit = Math.min(Number(args.limit) || 20, 50);
+    const limit = Math.min(Number(args.limit) || 50, 50);
     const COLS = "name_th, name_en, category, price, description, is_available";
     let data: Record<string, unknown>[] | null = null;
     let errMsg: string | null = null;

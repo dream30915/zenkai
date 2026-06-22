@@ -1,0 +1,23 @@
+{
+  "name": "Zenkai Izakaya",
+  "nameJa": "全開",
+  "nameTh": "เซนไค อิซากะยะ",
+  "tagline": "อิซากะยะญี่ปุ่น · บางแสน",
+  "cuisine": "Japanese",
+  "area": "บางแสน ชลบุรี",
+
+  "phone": "065 789 2454",
+  "phoneIntl": "+66657892454",
+
+  "hours": { "open": "11:00", "close": "23:30", "days": "ทุกวัน" },
+
+  "priceRange": "฿฿",
+  "priceMin": 60,
+  "priceMax": 380,
+  "currency": "THB",
+
+  "url": "https://zenkai.dumpsc.com",
+  "app": "https://app.dumpsc.com",
+
+  "channels": ["TikTok", "Instagram", "Facebook", "LINE"]
+}

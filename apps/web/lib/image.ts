@@ -1,22 +1,19 @@
 /**
  * Image Processing Pipeline
- * 1. fal.ai (Flux Pro) — text-to-image / image enhancement
+ * 1. Phaya (text-to-image) — สร้างรูปอาหาร (async generate→poll, ~1฿/รูป)
  * 2. rembg — background removal (self-hosted Docker)
  * 3. Sharp — resize, overlay text, format conversion
  */
 
-import { fal } from "@fal-ai/client";
 import axios from "axios";
 import sharp from "sharp";
 
 // ----------------------------------------------------------------
-// Config — fal.ai v1 client
+// Config — Phaya (จ่ายบาท, ~1฿/รูป) · provider เดียวกับ LLM
 // ----------------------------------------------------------------
-if (process.env.FAL_KEY) {
-  fal.config({ credentials: process.env.FAL_KEY });
-}
-
 const REMBG_URL = process.env.REMBG_URL || "http://localhost:7000";
+const PHAYA_KEY = process.env.PHAYA_API_KEY || "";
+const PHAYA_BASE = "https://api.phaya.io/api/v1";
 
 // ----------------------------------------------------------------
 // Types
@@ -35,36 +32,49 @@ export interface ProcessedImage {
 }
 
 // ----------------------------------------------------------------
-// generateFoodImage — สร้างรูปอาหารด้วย fal.ai Flux Pro
+// generateFoodImage — สร้างรูปอาหารด้วย Phaya (text-to-image, async)
 // ----------------------------------------------------------------
 export async function generateFoodImage(
   menuName: string,
   style: "photo" | "artistic" = "photo"
 ): Promise<GeneratedImage> {
+  if (!PHAYA_KEY) throw new Error("PHAYA_API_KEY not set");
+
   const prompt =
     style === "photo"
       ? `Professional food photography of ${menuName}, Japanese restaurant, top-down view, high quality, appetizing, natural lighting, on elegant plate`
       : `Artistic illustration of ${menuName}, Japanese food art style, vibrant colors, menu design`;
 
-  const result = await fal.subscribe("fal-ai/flux-pro", {
-    input: {
-      prompt,
-      image_size: "landscape_4_3",
-      num_images: 1,
-      output_format: "jpeg",
-      guidance_scale: 3.5,
-      num_inference_steps: 28,
+  // 1) สร้าง job
+  const create = await axios.post(
+    `${PHAYA_BASE}/text-to-image/generate`,
+    { prompt: prompt.slice(0, 1000), aspect_ratio: "4:3" },
+    {
+      headers: { Authorization: `Bearer ${PHAYA_KEY}`, "Content-Type": "application/json" },
+      timeout: 30000,
     },
-  });
+  );
+  const jobId = create.data?.job_id;
+  if (!jobId) {
+    throw new Error("Phaya: no job_id — " + JSON.stringify(create.data).slice(0, 200));
+  }
 
-  const image = (result.data as any)?.images?.[0];
-  if (!image) throw new Error("fal.ai: no image returned");
-
-  return {
-    url: image.url,
-    width: image.width,
-    height: image.height,
-  };
+  // 2) poll จนเสร็จ (สูงสุด ~90 วินาที)
+  for (let i = 0; i < 30; i++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const st = await axios.get(`${PHAYA_BASE}/text-to-image/status/${jobId}`, {
+      headers: { Authorization: `Bearer ${PHAYA_KEY}` },
+      timeout: 20000,
+    });
+    const status = String(st.data?.status || "");
+    if (/COMPLETED|SUCCEEDED/i.test(status)) {
+      const url: string | undefined = st.data?.image_url || st.data?.url;
+      if (!url) throw new Error("Phaya: completed but no image_url");
+      return { url, width: 1024, height: 768 };
+    }
+    if (/FAILED|ERROR/i.test(status)) throw new Error("Phaya: generation failed");
+  }
+  throw new Error("Phaya: timeout waiting for image");
 }
 
 // ----------------------------------------------------------------

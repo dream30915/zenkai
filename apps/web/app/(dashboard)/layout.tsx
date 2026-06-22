@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Home, Upload, BookOpen, Briefcase, BarChart2, Settings, HelpCircle, Sparkles, CalendarDays, Activity } from "lucide-react";
+import { Home, Upload, BookOpen, Briefcase, BarChart2, Settings, HelpCircle, Sparkles, CalendarDays, Activity, Megaphone } from "lucide-react";
 import { clsx } from "clsx";
 
 interface LiveStatus {
@@ -19,6 +19,7 @@ interface LiveStatus {
 const navItems = [
   { href: "/",          icon: Home,        label: "หน้าหลัก",    exact: true },
   { href: "/control",   icon: Activity,    label: "ศูนย์คุม"   },
+  { href: "/marketing", icon: Megaphone,   label: "การตลาด"   },
   { href: "/upload",    icon: Upload,      label: "สร้างวิดีโอ" },
   { href: "/menus",     icon: BookOpen,    label: "คลังเมนู"   },
   { href: "/jobs",      icon: Briefcase,   label: "งานทั้งหมด" },
